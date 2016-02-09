@@ -1,0 +1,176 @@
+#!/bin/bash
+
+PVCPATH=~/.pvc
+PVCLIB=$PVCPATH/lib
+PVCSRC=$PVCPATH/src
+
+
+PVC_NOT_INSTALLED_MSG () {
+    echo "Python version ${1} is not installed."
+}
+
+PVC_ALREADY_INSTALLED_MSG () {
+    echo "Python version ${1} is already installed."
+    echo "use \`pvc uninstall ${1}\` to uninstall."
+}
+
+PVC_INVALID_VERSION_MSG () {
+    echo "${1} is not a valid python version."
+}
+
+PVC_PYTHON_VERSION_NOT_INSTALLED () {
+    echo "${1} is not installed."
+}
+
+
+# Check if the given argument is a valid python version
+pvc_is_valid_python_version () {
+    if [[ ! -z $1 ]]; then
+        if [[ $1 =~ ^[0-9].[0-9].[0-9]$ ]]; then
+            return 0
+        fi
+    fi
+    PVC_INVALID_VERSION_MSG $1
+    return 1
+}
+
+pvc_python_version_is_installed () {
+  if [[ ! -z $1 ]]; then
+    if pvc_is_valid_python_version $1; then
+      if [[ -d $PVCPATH/$1 ]]; then
+        return 0
+      fi
+    fi
+  fi
+  PVC_PYTHON_VERSION_NOT_INSTALLED $1
+  return 1
+}
+
+# Unicode symbols
+snake_emoji="\xF0\x9F\x90\x8D "
+check_emoji="\033[0;32m\xE2\x9C\x94\033[0m "
+fail_emoji="\033[0;31m\xE2\x9C\x96\033[0m "
+
+
+# Check if the specified python version is installed
+is_installed () {
+    if [[ -d $PVCPATH/$1 ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Check if the specified python version can be installed
+can_install () {
+    if pvc_is_valid_python_version $1; then
+        if is_installed $1; then
+            PVC_ALREADY_INSTALLED_MSG $1
+            return 1
+        fi
+    else
+        PVC_INVALID_VERSION_MSG $1
+        return 1
+    fi
+    return 0
+
+}
+
+# Install the specified python version
+pvc_install_python_version () {
+    mkdir -p $PVCSRC
+    cd $PVCSRC
+    curl -Lo Python-${1}.tgz \
+        http://www.python.org/ftp/python/${1}/Python-${1}.tgz
+
+
+    if ! cat $PVCSRC/Python-${1}.tgz | grep -q "404 Not Found"; then
+        echo "${check_emoji} Downloaded Python-${1}.tgz"
+        tar -zxvf $PVCSRC/Python-${1}.tgz
+        cd Python-${1}
+        ./configure --prefix=$PVCPATH/${1}
+        make
+        make install
+        echo "${check_emoji} Installed Python-${1} to ${PVCPATH}/${1}"
+        #rm -rf $PVCSRC
+        echo "${check_emoji} Cleaned up src folder."
+    else
+        echo "${fail_emoji} Python-${1} not found. Is it a real version?"
+    fi
+}
+
+# uninstall the specified python version
+pvc_uninstall_python_version () {
+    if [[ -d $PVCPATH/$1 ]]; then
+        rm -rf $PVCPATH/${1}
+        echo "Uninstalled ${1}"
+    else
+        PVC_NOT_INSTALLED_MSG $1
+    fi
+}
+
+pvc () {
+  # 01 - The Install Command
+  if [[ $1 = "install" ]]; then
+    if can_install $2; then
+      pvc_install_python_version $2
+    fi
+
+  # 02 - The Uninstall Command
+  elif [[ $1 = "uninstall" ]]; then
+    if pvc_is_valid_python_version $2; then
+      pvc_uninstall_python_version $2
+    fi
+
+  # 03 - The Default Command
+  elif [[ $1 = "default" ]]; then
+    if [[ $2 = "use" ]]; then
+      if pvc_python_version_is_installed $3; then
+        echo "export PATH=${PVCPATH}/${3}/bin:\$PATH" > $PVCPATH/.profile
+        echo "export PYTHONPATH=${PVCPATH}/${2}/lib/python${3}/site-packages" >> $PVCPATH/.profile
+      fi
+    elif [[ $2 = "show" ]]; then
+      echo $(cat $PVCPATH/.profile)
+    fi
+  fi
+}
+#
+# # 01 - The Install Command
+# if [[ $1 = "install" ]]; then
+#     if can_install $2; then
+#         install $2
+#     fi
+#
+# # 02 - The Uninstall Command
+# elif [[ $1 = "uninstall" ]]; then
+#     if pvc_is_valid_python_version $2; then
+#         uninstall $2
+#     fi
+#
+# # 03 - The Default Command (Incomplete)
+# elif [[ $1 = "default" ]]; then
+#     if [[ $2 = "use" ]]; then
+#         if pvc_is_valid_python_version $3; then
+#             echo "export PATH=${PVCPATH}/${2}/bin:\$PATH" > $PVCPATH/.profile
+#             echo "export PYTHONPATH=${PVCPATH}/${2}/lib/python${2}/site-packages" >> $PVCPATH/.profile
+#         fi
+#     fi
+#
+# # 04 - The Use Command
+# elif [[ $1 = "use" ]]; then
+#     if pvc_is_valid_python_version $2; then
+#         export "PATH=${PVCPATH}/${2}/bin:\$PATH"
+#         export "PYTHONPATH=${PVCPATH}/${2}/lib/python${2}/site-packages"
+#         /bin/bash
+#     fi
+#
+# # 05 - The Activate Command
+#
+# # 99 - Else
+# else
+#     echo "Invalid command
+#
+# ${snake_emoji} Python Version Controller
+#     pvc use [version] #use a specified python version
+#     pvc default #echo the system python version
+#     pvc default use [version] #set the system python version"
+# fi
