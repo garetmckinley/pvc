@@ -1,6 +1,6 @@
 # pvc
 ### :snake: python version controller.
-pvc is a shell script for managing multiple python versions. You can easily install, remove, and switch between multiple installs of python. This is incredibly useful for testing scripts out in different versions, as well as porting 2.7 code to 3.4. 
+pvc is a shell script for managing multiple python versions. You can easily install, remove, and switch between multiple installs of python. This is incredibly useful for testing scripts out in different versions, as well as porting 2.7 code to 3.4.
 
 
 ## state
@@ -25,3 +25,7 @@ The [version] string must be in the format 0.0.0. Currently there is no version 
 - write `activate` function
     - The `activate` function will be used to activate a python version specified in the `./p.vc` file. If there is no `p.vc` file in the current directory, it will display an error.
     - Activate should play nicely with virtual environments.
+
+
+## Notes
+On linux you'll need to have zlib installed to properly run pvc install. You can ensure the proper dependencies are installed by running `sudo apt-get install dpkg-dev`
